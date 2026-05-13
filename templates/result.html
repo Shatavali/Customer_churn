@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telecom Churn Predictor - Result</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #4cc9f0;
+            --danger-color: #f72585;
+            --warning-color: #f8961e;
+            --dark-color: #1e1e2f;
+            --light-color: #f8f9fa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            padding: 1rem 2rem;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color) !important;
+        }
+
+        .navbar-brand i {
+            margin-right: 10px;
+            color: var(--danger-color);
+        }
+
+        .nav-link {
+            color: var(--dark-color) !important;
+            font-weight: 500;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-color) !important;
+            transform: translateY(-2px);
+        }
+
+        /* Result Container */
+        .result-container {
+            max-width: 900px;
+            margin: 100px auto 50px;
+            padding: 0 20px;
+        }
+
+        /* Result Card */
+        .result-card {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            margin-bottom: 30px;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Status Icons */
+        .status-icon {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            font-size: 3.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .status-high {
+            background: linear-gradient(135deg, var(--danger-color), #b5179e);
+            box-shadow: 0 10px 30px rgba(247, 37, 133, 0.3);
+        }
+
+        .status-medium {
+            background: linear-gradient(135deg, var(--warning-color), #f3722c);
+            box-shadow: 0 10px 30px rgba(248, 150, 30, 0.3);
+        }
+
+        .status-low {
+            background: linear-gradient(135deg, var(--success-color), var(--primary-color));
+            box-shadow: 0 10px 30px rgba(76, 201, 240, 0.3);
+        }
+
+        .status-icon i {
+            color: white;
+        }
+
+        /* Probability Meter */
+        .probability-meter {
+            margin: 30px 0;
+        }
+
+        .probability-value {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .probability-label {
+            font-size: 1.2rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), var(--warning-color), var(--danger-color));
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+
+        /* Risk Level Badge */
+        .risk-badge {
+            display: inline-block;
+            padding: 10px 30px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin: 20px 0;
+        }
+
+        .risk-high {
+            background: rgba(247, 37, 133, 0.1);
+            color: var(--danger-color);
+            border: 2px solid var(--danger-color);
+        }
+
+        .risk-medium {
+            background: rgba(248, 150, 30, 0.1);
+            color: var(--warning-color);
+            border: 2px solid var(--warning-color);
+        }
+
+        .risk-low {
+            background: rgba(76, 201, 240, 0.1);
+            color: var(--success-color);
+            border: 2px solid var(--success-color);
+        }
+
+        /* Recommendations Section */
+        .recommendations-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .recommendations-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .recommendations-title i {
+            color: var(--primary-color);
+        }
+
+        .recommendation-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .recommendation-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: fadeIn 0.5s ease;
+            animation-fill-mode: both;
+        }
+
+        .recommendation-item:nth-child(1) { animation-delay: 0.1s; }
+        .recommendation-item:nth-child(2) { animation-delay: 0.2s; }
+        .recommendation-item:nth-child(3) { animation-delay: 0.3s; }
+        .recommendation-item:nth-child(4) { animation-delay: 0.4s; }
+        .recommendation-item:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .recommendation-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .recommendation-text {
+            flex: 1;
+            text-align: left;
+            font-size: 1rem;
+            color: var(--dark-color);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Customer Summary */
+        .customer-summary {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .summary-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            padding: 10px;
+            background: white;
+            border-radius: 10px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .summary-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .result-container {
+                margin-top: 80px;
+            }
+            
+            .result-card {
+                padding: 30px;
+            }
+            
+            .probability-value {
+                font-size: 3rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line"></i>
+                ChurnPredict AI
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/predict">New Prediction</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Result Container -->
+    <div class="result-container">
+        {% if result %}
+        <!-- Main Result Card -->
+        <div class="result-card">
+            <!-- Status Icon based on probability -->
+            {% set risk_level = 'high' if result.probability > 0.7 else 'medium' if result.probability > 0.4 else 'low' %}
+            
+            <div class="status-icon status-{{ risk_level }}">
+                {% if risk_level == 'high' %}
+                <i class="fas fa-exclamation-triangle"></i>
+                {% elif risk_level == 'medium' %}
+                <i class="fas fa-exclamation-circle"></i>
+                {% else %}
+                <i class="fas fa-check-circle"></i>
+                {% endif %}
+            </div>
+
+            <!-- Prediction Result -->
+            <h1 style="font-size: 2rem; color: var(--dark-color); margin-bottom: 20px;">
+                {% if result.prediction == 1 %}
+                ⚠️ High Risk of Churn
+                {% else %}
+                ✅ Low Risk of Churn
+                {% endif %}
+            </h1>
+
+            <!-- Probability Meter -->
+            <div class="probability-meter">
+                <div class="probability-value">
+                    {{ "%.1f"|format(result.probability * 100) }}%
+                </div>
+                <div class="probability-label">Churn Probability</div>
+                
+                <!-- Progress Bar -->
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" style="width: {{ result.probability * 100 }}%;"></div>
+                </div>
+            </div>
+
+            <!-- Risk Badge -->
+            <div class="risk-badge risk-{{ risk_level }}">
+                {% if risk_level == 'high' %}
+                <i class="fas fa-exclamation-triangle"></i> CRITICAL RISK
+                {% elif risk_level == 'medium' %}
+                <i class="fas fa-exclamation-circle"></i> MODERATE RISK
+                {% else %}
+                <i class="fas fa-check-circle"></i> LOW RISK
+                {% endif %}
+            </div>
+
+            <!-- Customer Summary -->
+            {% if result.customer_data %}
+            <div class="customer-summary">
+                <div class="summary-title">
+                    <i class="fas fa-user"></i>
+                    Customer Summary
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-label">Tenure</div>
+                        <div class="summary-value">{{ result.customer_data.tenure }} months</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Contract</div>
+                        <div class="summary-value">{{ result.customer_data.Contract }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Monthly Charges</div>
+                        <div class="summary-value">${{ "%.2f"|format(result.customer_data.MonthlyCharges) }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Payment Method</div>
+                        <div class="summary-value">{{ result.customer_data.PaymentMethod[:15] }}...</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recommendations Section -->
+        <div class="recommendations-section">
+            <div class="recommendations-title">
+                <i class="fas fa-lightbulb"></i>
+                Actionable Recommendations
+            </div>
+            
+            <ul class="recommendation-list">
+                {% for recommendation in recommendations %}
+                <li class="recommendation-item">
+                    <div class="recommendation-icon">
+                        <i class="fas fa-{% if loop.index == 1 %}phone{% elif loop.index == 2 %}gift{% elif loop.index == 3 %}shield{% elif loop.index == 4 %}chart-line{% else %}check{% endif %}"></i>
+                    </div>
+                    <div class="recommendation-text">{{ recommendation }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- ── SHAP Explainability Card ── -->
+        {% if result.shap_data and result.shap_data.success and result.shap_data.top_positive %}
+        <div class="recommendations-section" style="margin-top:20px;">
+            <div class="recommendations-title" style="background:linear-gradient(135deg,#1e1b4b,#312e81);">
+                <i class="fas fa-brain"></i>
+                Why This Prediction? (SHAP Analysis)
+            </div>
+            <div style="padding:20px;">
+                <p style="color:#94a3b8;font-size:.88rem;margin-bottom:16px;">
+                    Each bar shows how much a feature <strong style="color:#a78bfa;">pushes toward churn</strong>
+                    or <strong style="color:#34d399;">reduces churn risk</strong>.
+                </p>
+                {% for fname, fval in result.shap_data.top_positive[:6] %}
+                <div style="margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:3px;">
+                        <span style="color:#e2e8f0;">{{ fname }}</span>
+                        <span style="color:#f87171;font-weight:700;">+{{ "%.3f"|format(fval) }}</span>
+                    </div>
+                    <div style="background:#1e293b;border-radius:4px;height:8px;overflow:hidden;">
+                        <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#7c3aed,#ef4444);width:{{ [fval * 300, 100]|min|int }}%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if result.shap_data.top_negative %}
+                <div style="border-top:1px solid #334155;margin:16px 0 12px;"></div>
+                <p style="color:#94a3b8;font-size:.82rem;margin-bottom:10px;">Factors reducing churn risk:</p>
+                {% for fname, fval in result.shap_data.top_negative[:3] %}
+                <div style="margin-bottom:8px;">
+                    <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:3px;">
+                        <span style="color:#e2e8f0;">{{ fname }}</span>
+                        <span style="color:#34d399;font-weight:700;">{{ "%.3f"|format(fval) }}</span>
+                    </div>
+                    <div style="background:#1e293b;border-radius:4px;height:8px;overflow:hidden;">
+                        <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#059669,#34d399);width:{{ [fval|abs * 300, 100]|min|int }}%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ── Claude AI Recommendation Card ── -->
+        {% if result.ai_recommendation %}
+        <div class="recommendations-section" style="margin-top:20px;">
+            <div class="recommendations-title" style="background:linear-gradient(135deg,#0c1a3b,#1e3a6e);">
+                <i class="fas fa-robot"></i>
+                AI-Generated Retention Strategy
+                {% if result.ai_success %}
+                <span style="font-size:.7rem;background:#1d4ed8;padding:2px 8px;border-radius:999px;margin-left:8px;">Claude AI</span>
+                {% else %}
+                <span style="font-size:.7rem;background:#374151;padding:2px 8px;border-radius:999px;margin-left:8px;">Rule-Based Fallback</span>
+                {% endif %}
+            </div>
+            <div style="padding:20px;font-size:.88rem;line-height:1.7;color:#cbd5e1;white-space:pre-wrap;">
+                {{ result.ai_recommendation | replace('**', '') }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="/predict" class="btn-primary">
+                <i class="fas fa-redo"></i>
+                New Prediction
+            </a>
+            <a href="/dashboard" class="btn-secondary">
+                <i class="fas fa-chart-pie"></i>
+                View Dashboard
+            </a>
+            <form method="POST" action="/report/download" style="display:inline;">
+                <button type="submit" class="btn-secondary" style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-weight:600;">
+                    <i class="fas fa-file-pdf"></i>
+                    Download PDF Report
+                </button>
+            </form>
+        </div>
+
+        {% else %}
+        <!-- No result available -->
+        <div class="result-card">
+            <div class="status-icon status-low">
+                <i class="fas fa-question"></i>
+            </div>
+            <h2 style="color: var(--dark-color); margin-bottom: 20px;">No Prediction Found</h2>
+            <p style="color: #666; margin-bottom: 30px;">Please make a prediction first to see results.</p>
+            <a href="/predict" class="btn-primary">
+                <i class="fas fa-arrow-left"></i>
+                Go to Prediction Form
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Footer -->
+    <div style="background: var(--dark-color); color: white; text-align: center; padding: 20px; margin-top: 50px;">
+        <div class="container">
+            <p>© 2024 Telecom Churn Predictor. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Animate progress bar on load
+        window.addEventListener('load', function() {
+            const progressBar = document.querySelector('.progress-bar-fill');
+            if (progressBar) {
+                const width = progressBar.style.width;
+                progressBar.style.width = '0%';
+                setTimeout(() => {
+                    progressBar.style.width = width;
+                }, 100);
+            }
+        });
+
+        // Confetti animation for low risk predictions
+        {% if result and risk_level == 'low' %}
+        function launchConfetti() {
+            // Simple confetti effect
+            const colors = ['#4cc9f0', '#4361ee', '#3f37c9'];
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.style.position = 'fixed';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.top = '-10px';
+                    confetti.style.width = '10px';
+                    confetti.style.height = '10px';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.borderRadius = '50%';
+                    confetti.style.pointerEvents = 'none';
+                    confetti.style.zIndex = '9999';
+                    confetti.style.animation = `fall ${Math.random() * 3 + 2}s linear`;
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 5000);
+                }, i * 100);
+            }
+        }
+
+        // Add keyframes for confetti animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fall {
+                to {
+                    transform: translateY(100vh) rotate(360deg);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Launch confetti
+        launchConfetti();
+        {% endif %}
+
+        // Print function
+        window.print = function() {
+            const printContent = document.querySelector('.result-container').innerHTML;
+            const originalContent = document.body.innerHTML;
+            
+            document.body.innerHTML = `
+                <div style="padding: 40px; font-family: 'Segoe UI', sans-serif;">
+                    <h1 style="color: #1e1e2f; text-align: center;">Churn Prediction Report</h1>
+                    <p style="text-align: center; color: #666;">Generated on ${new Date().toLocaleDateString()}</p>
+                    ${printContent}
+                </div>
+            `;
+            
+            window.print();
+            document.body.innerHTML = originalContent;
+            location.reload();
+        };
+    </script>
+</body>
+</html>

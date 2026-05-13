@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Customer Segmentation{% endblock %}
+{% block content %}
+<style>
+:root { --g:#10b981; --b:#3b82f6; --p:#8b5cf6; --o:#f59e0b; --r:#ef4444; }
+.seg-hero { background:linear-gradient(135deg,#0f172a,#1e1b4b); border:1px solid #312e81; border-radius:16px; padding:2rem; margin-bottom:1.5rem; text-align:center; }
+.seg-hero h1 { font-size:1.9rem; font-weight:700; color:#c4b5fd; margin-bottom:.4rem; }
+.seg-hero p  { color:#94a3b8; }
+.card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:1.5rem; margin-bottom:1.2rem; }
+.card h3 { color:#e2e8f0; font-size:1rem; margin-bottom:1rem; }
+.seg-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+.seg-card { border-radius:12px; padding:1.2rem; border:1px solid #334155; background:#1e293b; text-align:center; position:relative; overflow:hidden; }
+.seg-card .icon { font-size:2rem; margin-bottom:.5rem; }
+.seg-card .label { font-weight:700; font-size:1rem; color:#e2e8f0; margin-bottom:.3rem; }
+.seg-card .count { color:#94a3b8; font-size:.85rem; }
+.seg-card .churn-bar { height:6px; border-radius:3px; margin:.8rem 0 .3rem; }
+.seg-card .churn-pct { font-size:.8rem; font-weight:700; }
+.stat-row { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.8rem; }
+.stat-pill { background:#0f172a; border-radius:999px; padding:.2rem .7rem; font-size:.75rem; color:#94a3b8; }
+.cluster-select { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
+.cluster-select label { color:#94a3b8; font-size:.9rem; }
+.cluster-select select { background:#0f172a; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:.4rem .8rem; font-size:.9rem; }
+.btn-seg { background:linear-gradient(135deg,#7c3aed,#2563eb); color:white; border:none; border-radius:8px; padding:.5rem 1.2rem; cursor:pointer; font-size:.9rem; }
+#scatter-canvas { width:100%; height:340px; }
+.legend-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; }
+</style>
+
+<div class="seg-hero">
+  <h1>👥 Customer Segmentation</h1>
+  <p>KMeans clustering reveals natural customer groups — ranked by churn risk</p>
+</div>
+
+{% if error %}
+<div style="background:#450a0a;border:1px solid #ef4444;border-radius:8px;padding:1rem;color:#fca5a5;margin-bottom:1rem;">⚠️ {{ error }}</div>
+{% endif %}
+
+<div class="cluster-select">
+  <label>Number of clusters:</label>
+  <select id="n-clusters-sel" onchange="reloadClusters()">
+    {% for n in [2,3,4,5,6,7] %}
+    <option value="{{ n }}" {{ 'selected' if n == n_clusters else '' }}>{{ n }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn-seg" onclick="reloadClusters()">🔄 Recalculate</button>
+</div>
+
+{% if segments %}
+<div class="seg-grid">
+  {% for seg in segments %}
+  {% set colors = ['#ef4444','#f59e0b','#3b82f6','#10b981','#8b5cf6','#06b6d4','#ec4899'] %}
+  {% set c = colors[loop.index0 % colors|length] %}
+  <div class="seg-card" style="border-top:3px solid {{ seg.color }};">
+    <div class="icon">{{ seg.icon }}</div>
+    <div class="label">{{ seg.label }}</div>
+    <div class="count">{{ seg.count }} customers ({{ seg.pct }}%)</div>
+    <div class="churn-bar" style="background:linear-gradient(90deg,{{ seg.color }} {{ seg.churn_rate }}%,#1e293b {{ seg.churn_rate }}%)"></div>
+    <div class="churn-pct" style="color:{{ seg.color }};">{{ seg.churn_rate }}% churn rate</div>
+    <div class="stat-row">
+      {% if seg.avg_tenure is defined %}<span class="stat-pill">📅 {{ seg.avg_tenure }}mo tenure</span>{% endif %}
+      {% if seg.avg_monthly is defined %}<span class="stat-pill">💲{{ seg.avg_monthly }}/mo</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h3>🗺️ PCA Scatter — Customer Clusters (2D projection)</h3>
+  <div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem;" id="scatter-legend"></div>
+  <canvas id="scatter-canvas"></canvas>
+</div>
+
+<div class="card">
+  <h3>📊 Cluster Comparison Table</h3>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+      <thead>
+        <tr style="background:#0f172a;">
+          <th style="padding:.6rem 1rem;text-align:left;color:#94a3b8;">Segment</th>
+          <th style="padding:.6rem 1rem;color:#94a3b8;">Count</th>
+          <th style="padding:.6rem 1rem;color:#94a3b8;">Churn Rate</th>
+          <th style="padding:.6rem 1rem;color:#94a3b8;">Avg Tenure</th>
+          <th style="padding:.6rem 1rem;color:#94a3b8;">Avg Monthly</th>
+          <th style="padding:.6rem 1rem;color:#94a3b8;">Avg Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for seg in segments %}
+        <tr style="border-bottom:1px solid #1e293b;">
+          <td style="padding:.6rem 1rem;"><span style="color:{{ seg.color }};font-weight:700;">{{ seg.icon }} {{ seg.label }}</span></td>
+          <td style="padding:.6rem 1rem;text-align:center;color:#e2e8f0;">{{ seg.count }}</td>
+          <td style="padding:.6rem 1rem;text-align:center;">
+            <span style="color:{{ seg.color }};font-weight:700;">{{ seg.churn_rate }}%</span>
+          </td>
+          <td style="padding:.6rem 1rem;text-align:center;color:#e2e8f0;">{{ seg.avg_tenure if seg.avg_tenure is defined else '-' }}mo</td>
+          <td style="padding:.6rem 1rem;text-align:center;color:#e2e8f0;">${{ seg.avg_monthly if seg.avg_monthly is defined else '-' }}</td>
+          <td style="padding:.6rem 1rem;text-align:center;color:#e2e8f0;">${{ seg.avg_total if seg.avg_total is defined else '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const PCA_POINTS = {{ pca_points | safe }};
+const N_CLUSTERS = {{ n_clusters }};
+const COLORS = ['#ef4444','#f59e0b','#3b82f6','#10b981','#8b5cf6','#06b6d4','#ec4899'];
+const LABELS = {{ segments | map(attribute='label') | list | tojson if segments else '[]' }};
+
+function reloadClusters() {
+  const n = document.getElementById('n-clusters-sel').value;
+  window.location.href = `/segmentation?n_clusters=${n}`;
+}
+
+if (PCA_POINTS.length) {
+  const datasets = [];
+  for (let c = 0; c < N_CLUSTERS; c++) {
+    const pts = PCA_POINTS.filter(p => p.cluster === c);
+    datasets.push({
+      label: LABELS[c] || `Cluster ${c}`,
+      data: pts.map(p => ({ x: p.x, y: p.y })),
+      backgroundColor: COLORS[c % COLORS.length] + '99',
+      borderColor: COLORS[c % COLORS.length],
+      pointRadius: 3, pointHoverRadius: 5,
+    });
+  }
+
+  new Chart(document.getElementById('scatter-canvas'), {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#e2e8f0', font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: (${ctx.parsed.x.toFixed(2)}, ${ctx.parsed.y.toFixed(2)})` } }
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' }, title: { display: true, text: 'PCA Component 1', color: '#94a3b8' } },
+        y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' }, title: { display: true, text: 'PCA Component 2', color: '#94a3b8' } },
+      }
+    }
+  });
+}
+</script>
+{% endblock %}

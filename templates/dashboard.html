@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChurnCortex · AI analytics dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0b081a;  /* deep cosmic */
+            color: #e4e0fa;
+            min-height: 100vh;
+        }
+
+        /* ---- animated deep background (same as AI pages) ---- */
+        .bg-orb {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 40% 50%, #281e4e, #0c0a18 70%);
+            z-index: -2;
+        }
+        .bg-orb::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" opacity="0.15"><path d="M60 80 Q 100 30 140 80 T 180 80" stroke="%236d5df0" fill="none" stroke-width="0.8"/><circle cx="40" cy="140" r="5" fill="%239281ff"/><circle cx="160" cy="110" r="7" fill="%235b4bcb"/></svg>');
+            background-size: 350px;
+            pointer-events: none;
+        }
+
+        /* ---- glass navbar (dark) ---- */
+        .navbar {
+            background: rgba(12, 10, 25, 0.8) !important;
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(140, 120, 255, 0.25);
+            box-shadow: 0 15px 35px -10px #020012;
+            padding: 0.9rem 2rem;
+        }
+        .navbar-brand {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(130deg, #dad2ff, #aa97ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .navbar-brand i {
+            background: none;
+            -webkit-text-fill-color: #9e8eff;
+            margin-right: 8px;
+            font-size: 2rem;
+        }
+        .nav-link {
+            color: #c9c0f0 !important;
+            font-weight: 500;
+            margin: 0 14px;
+            padding: 8px 0;
+            border-bottom: 2px solid transparent;
+            transition: 0.2s;
+        }
+        .nav-link:hover {
+            color: #ffffff !important;
+            border-bottom-color: #9e8bff;
+        }
+
+        /* ---- main container ---- */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 130px auto 60px;
+            padding: 0 24px;
+        }
+
+        /* ---- header with badge (like AI pages) ---- */
+        .page-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        .page-header h1 {
+            font-size: 3.3rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #f2ecff, #cabdff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px #4d3bcb50;
+        }
+        .header-badge {
+            display: inline-block;
+            background: #1d1938;
+            border: 1px solid #6553d6;
+            border-radius: 100px;
+            padding: 8px 28px;
+            margin-bottom: 25px;
+            color: #c3b6ff;
+            font-weight: 500;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 8px 20px -10px #020013;
+        }
+        .header-badge i {
+            color: #9783ff;
+            margin-right: 8px;
+        }
+
+        /* ---- stats cards (dark glass, same as home) ---- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 45px;
+        }
+        .stat-card {
+            background: rgba(18, 15, 35, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(140, 120, 255, 0.3);
+            border-radius: 34px;
+            padding: 28px 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 25px 40px -15px #01000a;
+        }
+        .stat-card:hover {
+            transform: translateY(-6px);
+            border-color: #a28eff;
+            background: rgba(35, 28, 70, 0.9);
+        }
+        .stat-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.3rem;
+            background: #1d1945;
+            border: 1px solid #6a58d0;
+        }
+        .stat-icon.blue i { color: #6d8eff; }
+        .stat-icon.red i { color: #ff70a0; }
+        .stat-icon.green i { color: #6be0be; }
+        .stat-icon.orange i { color: #ffb26e; }
+
+        .stat-content { flex: 1; }
+        .stat-value {
+            font-size: 2.4rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #f0eaff, #d4c5ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+        .stat-label {
+            color: #b0a5e0;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+        }
+
+        /* ---- charts grid (dark cards) ---- */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 30px;
+            margin-bottom: 45px;
+        }
+        .chart-card {
+            background: rgba(14, 11, 30, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid #4c3d9a;
+            border-radius: 42px;
+            padding: 28px;
+            box-shadow: 0 30px 45px -20px #020010;
+        }
+        .chart-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #ddd2ff;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px dashed #584caa;
+            padding-bottom: 14px;
+        }
+        .chart-title i {
+            color: #ab96ff;
+            font-size: 1.8rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+
+        /* ---- recent predictions (dark table) ---- */
+        .recent-section {
+            background: rgba(14, 11, 30, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid #5546af;
+            border-radius: 48px;
+            padding: 30px;
+            box-shadow: 0 35px 60px -20px #030011;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #e3d9ff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .filter-badge {
+            background: #292454;
+            border: 1px solid #8f7cf2;
+            color: #daceff;
+            padding: 8px 24px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            backdrop-filter: blur(4px);
+        }
+        .filter-badge:hover {
+            background: #3d3380;
+            border-color: #bbaaff;
+            color: white;
+        }
+
+        /* ---- dark table ---- */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 30px;
+        }
+        .recent-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .recent-table th {
+            text-align: left;
+            padding: 18px 16px;
+            background: #19153a;
+            color: #ccc3ff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            border-bottom: 2px solid #4e429b;
+        }
+        .recent-table td {
+            padding: 16px;
+            border-bottom: 1px solid #332e60;
+            color: #c5baf5;
+        }
+        .recent-table tr:hover td {
+            background: #211d49;
+        }
+        .risk-badge {
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-block;
+            text-transform: uppercase;
+        }
+        .risk-high {
+            background: rgba(247, 37, 133, 0.18);
+            color: #ffa6c9;
+            border: 1px solid #ff70a0;
+        }
+        .risk-medium {
+            background: rgba(248, 150, 30, 0.18);
+            color: #ffcd94;
+            border: 1px solid #f9b453;
+        }
+        .risk-low {
+            background: rgba(76, 201, 240, 0.18);
+            color: #9ce2ff;
+            border: 1px solid #4cc9f0;
+        }
+
+        /* footer */
+        .footer {
+            background: #070518;
+            border-top: 1px solid #3d3480;
+            color: #9288c2;
+            text-align: center;
+            padding: 30px;
+            margin-top: 60px;
+        }
+
+        /* responsive */
+        @media (max-width: 700px) {
+            .page-header h1 { font-size: 2.4rem; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .stat-value { font-size: 2rem; }
+        }
+
+        /* animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stat-card, .chart-card, .recent-section {
+            animation: fadeInUp 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-orb"></div>
+
+    <!-- Navigation (dark) -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line"></i> ChurnCortex · AI
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/predict">Predict</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/batch-predict">Batch Upload</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Container (dark unified) -->
+    <div class="dashboard-container">
+        <!-- header with badge -->
+        <div class="page-header">
+            <div class="header-badge"><i class="fa-regular fa-chart-line"></i> LIVE ANALYTICS · ENSEMBLE AI</div>
+            <h1><i class="fas fa-chart-pie me-3"></i> churn intelligence</h1>
+            <p style="color:#bcb0f0;">real‑time risk monitoring · model drift · explainable insights</p>
+        </div>
+
+        <!-- Stats Cards (dark glass) with dynamic template vars -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" id="statTotal">1,247</div>
+                    <div class="stat-label">total predictions</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" id="statHigh">312</div>
+                    <div class="stat-label">high risk</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" id="statMedium">458</div>
+                    <div class="stat-label">medium risk</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value" id="statLow">477</div>
+                    <div class="stat-label">low risk</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid (dark themed) -->
+        <div class="charts-grid">
+            <!-- Risk Distribution Doughnut -->
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-pie-chart"></i> risk distribution</div>
+                <div class="chart-container">
+                    <canvas id="riskChart"></canvas>
+                </div>
+            </div>
+            <!-- Probability Distribution Bar -->
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-bar"></i> probability bins</div>
+                <div class="chart-container">
+                    <canvas id="probabilityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent predictions table (dark) -->
+        <div class="recent-section">
+            <div class="section-header">
+                <div class="section-title"><i class="fas fa-history"></i> recent predictions</div>
+                <div class="filter-badge" onclick="location.reload()"><i class="fas fa-sync-alt"></i> refresh</div>
+            </div>
+            <div class="table-responsive">
+                <table class="recent-table">
+                    <thead>
+                        <tr><th>Time</th><th>Tenure</th><th>Contract</th><th>Monthly</th><th>Probability</th><th>Risk</th></tr>
+                    </thead>
+                    <tbody id="recentTableBody">
+                        <!-- sample rows (will be replaced by template but kept for dark preview) -->
+                        <tr><td>2025-03-20</td><td>5 mo</td><td>Month-to-month</td><td>$89.30</td><td>84%</td><td><span class="risk-badge risk-high">HIGH</span></td></tr>
+                        <tr><td>2025-03-20</td><td>34 mo</td><td>One year</td><td>$65.50</td><td>23%</td><td><span class="risk-badge risk-low">LOW</span></td></tr>
+                        <tr><td>2025-03-19</td><td>12 mo</td><td>Month-to-month</td><td>$102.20</td><td>58%</td><td><span class="risk-badge risk-medium">MEDIUM</span></td></tr>
+                        <tr><td>2025-03-19</td><td>2 mo</td><td>Month-to-month</td><td>$45.90</td><td>91%</td><td><span class="risk-badge risk-high">HIGH</span></td></tr>
+                        <tr><td>2025-03-18</td><td>48 mo</td><td>Two year</td><td>$120.10</td><td>17%</td><td><span class="risk-badge risk-low">LOW</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer dark -->
+    <div class="footer">
+        <p>© 2025 ChurnCortex · T.Y. project · AI / ML · ensemble + SHAP</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // mock data (simulating template vars) — in real app replace with {{ stats.xxx }} but we keep numbers for dark demo
+        // we also update stat numbers from the static ones to match chart
+        const highRisk = 312, mediumRisk = 458, lowRisk = 477, total = highRisk+mediumRisk+lowRisk; // 1247
+
+        document.getElementById('statTotal').innerText = total;
+        document.getElementById('statHigh').innerText = highRisk;
+        document.getElementById('statMedium').innerText = mediumRisk;
+        document.getElementById('statLow').innerText = lowRisk;
+
+        // Risk Doughnut (dark mode friendly)
+        const riskCtx = document.getElementById('riskChart').getContext('2d');
+        new Chart(riskCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['High risk', 'Medium risk', 'Low risk'],
+                datasets: [{
+                    data: [highRisk, mediumRisk, lowRisk],
+                    backgroundColor: ['#f65796', '#f9a34b', '#61d4f0'],
+                    borderColor: '#0b0820',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#d7ccff', font: { weight:500 } } }
+                },
+                cutout: '68%',
+            }
+        });
+
+        // Probability distribution (bins) – generate dummy distribution that matches counts approx
+        const probCtx = document.getElementById('probabilityChart').getContext('2d');
+        // generate bins: 0-20% (low) 20-40% (low-med) 40-60% (med) 60-80% (med-high) 80-100% (high)
+        // we'll scale based on low/med/high counts
+        const bin0_20 = Math.round(lowRisk * 0.5);        // 239
+        const bin20_40 = Math.round(lowRisk * 0.5);       // 238
+        const bin40_60 = Math.round(mediumRisk * 0.6);    // 275
+        const bin60_80 = Math.round(mediumRisk * 0.4);    // 183
+        const bin80_100 = highRisk;                        // 312
+
+        new Chart(probCtx, {
+            type: 'bar',
+            data: {
+                labels: ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%'],
+                datasets: [{
+                    label: 'customers',
+                    data: [bin0_20, bin20_40, bin40_60, bin60_80, bin80_100],
+                    backgroundColor: '#9b86ff',
+                    borderRadius: 10,
+                    barPercentage: 0.65,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#d2c6ff' } }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#2b2650' }, ticks: { color:'#bfb2ff' } },
+                    x: { ticks: { color:'#bfb2ff' } }
+                }
+            }
+        });
+
+        // optional stat counter animation (from original)
+        document.querySelectorAll('.stat-value').forEach((el) => {
+            const target = parseInt(el.innerText);
+            let current = 0, step = target/40;
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= target) {
+                    el.innerText = target;
+                    clearInterval(timer);
+                } else {
+                    el.innerText = Math.floor(current);
+                }
+            }, 20);
+        });
+    </script>
+</body>
+</html>

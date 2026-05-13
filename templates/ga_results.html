@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% block title %}Genetic Algorithm Optimisation{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --ga-green:  #10b981;
+    --ga-blue:   #3b82f6;
+    --ga-purple: #8b5cf6;
+    --ga-orange: #f59e0b;
+    --bg-card:   #1e293b;
+    --bg-darker: #0f172a;
+  }
+
+  .ga-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    border: 1px solid #312e81;
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .ga-hero::before {
+    content: "🧬";
+    position: absolute;
+    font-size: 10rem;
+    opacity: 0.04;
+    top: -20px; right: -20px;
+  }
+  .ga-hero h1 { font-size: 2rem; font-weight: 700; color: #c4b5fd; margin-bottom: .5rem; }
+  .ga-hero p  { color: #94a3b8; font-size: 1rem; }
+
+  /* ── grid cards ── */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card  { background: var(--bg-card); border-radius: 12px; padding: 1.4rem 1.2rem; text-align: center; border: 1px solid #334155; }
+  .stat-card .value { font-size: 2rem; font-weight: 700; }
+  .stat-card .label { color: #94a3b8; font-size: .85rem; margin-top: .25rem; }
+  .c-green  { color: var(--ga-green); }
+  .c-blue   { color: var(--ga-blue); }
+  .c-purple { color: var(--ga-purple); }
+  .c-orange { color: var(--ga-orange); }
+
+  /* ── chart card ── */
+  .chart-card { background: var(--bg-card); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+  .chart-card h3 { color: #e2e8f0; margin-bottom: 1rem; font-size: 1.05rem; }
+
+  /* ── params table ── */
+  .param-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .param-table th { background: #0f172a; color: #94a3b8; padding: .6rem 1rem; text-align: left; font-weight: 600; }
+  .param-table td { padding: .6rem 1rem; border-bottom: 1px solid #1e293b; color: #e2e8f0; }
+  .param-table tr:hover td { background: #1e293b; }
+  .badge { display: inline-block; padding: .2rem .6rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+  .badge-green  { background: #052e16; color: var(--ga-green); }
+  .badge-blue   { background: #0c1a3b; color: var(--ga-blue); }
+  .badge-purple { background: #1e1245; color: var(--ga-purple); }
+
+  /* ── run panel ── */
+  .run-panel { background: var(--bg-card); border-radius: 12px; padding: 1.5rem; border: 1px solid #334155; margin-bottom: 1.5rem; }
+  .run-panel h3 { color: #e2e8f0; margin-bottom: 1rem; }
+  .run-controls { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1rem; }
+  .run-controls label { color: #94a3b8; font-size: .85rem; display: block; margin-bottom: .3rem; }
+  .run-controls input[type=range] { width: 160px; }
+  .run-controls span { color: var(--ga-purple); font-weight: 700; }
+  .btn-ga {
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    color: white; border: none; border-radius: 8px;
+    padding: .65rem 1.5rem; font-weight: 600; cursor: pointer;
+    font-size: .95rem; transition: opacity .2s;
+  }
+  .btn-ga:hover { opacity: .85; }
+  .btn-ga:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── log stream ── */
+  #ga-log {
+    background: #020617; color: #a3e635; font-family: monospace;
+    font-size: .8rem; padding: 1rem; border-radius: 8px;
+    max-height: 260px; overflow-y: auto;
+    white-space: pre-wrap; display: none;
+    border: 1px solid #1e293b;
+  }
+
+  /* ── generation table ── */
+  .gen-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  .gen-table th { background: #0f172a; color: #94a3b8; padding: .5rem .8rem; text-align: right; font-weight: 600; }
+  .gen-table th:first-child { text-align: left; }
+  .gen-table td { padding: .5rem .8rem; border-bottom: 1px solid #1e293b; color: #e2e8f0; text-align: right; }
+  .gen-table td:first-child { text-align: left; }
+  .gen-table .best-row td { background: #052e16 !important; color: var(--ga-green); }
+</style>
+
+<div class="ga-hero">
+  <h1>🧬 Genetic Algorithm Optimisation</h1>
+  <p>Evolutionary search over the XGBoost hyperparameter space — survival of the fittest model.</p>
+</div>
+
+<!-- ── How it works ── -->
+<div class="chart-card">
+  <h3>⚙️ How the GA Works</h3>
+  <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:1rem; text-align:center;">
+    {% for step in [
+      ("🧬","Initialise","Random population of hyperparameter sets (chromosomes)"),
+      ("📊","Evaluate","Cross-val ROC-AUC is the fitness function"),
+      ("🏆","Select","Tournament selection — fitter chromosomes breed more"),
+      ("🔀","Crossover","Uniform gene exchange between two parents"),
+      ("⚡","Mutate","Gaussian perturbation on random genes"),
+      ("🔁","Repeat","Iterate for N generations, keep elite survivors"),
+    ] %}
+    <div style="background:#0f172a; border-radius:10px; padding:1rem; border:1px solid #1e293b;">
+      <div style="font-size:1.8rem;">{{ step[0] }}</div>
+      <div style="font-weight:700; color:#c4b5fd; margin:.3rem 0;">{{ step[1] }}</div>
+      <div style="font-size:.78rem; color:#94a3b8;">{{ step[2] }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ── Quick Run Panel ── -->
+<div class="run-panel">
+  <h3>🚀 Run GA Optimisation (Demo)</h3>
+  <p style="color:#94a3b8; font-size:.9rem; margin-bottom:1rem;">
+    Triggers a live GA run in the backend. For a full run use <code>model.py</code>.
+  </p>
+  <div class="run-controls">
+    <div>
+      <label>Population size: <span id="pop-val">10</span></label>
+      <input type="range" id="pop-size" min="5" max="30" value="10"
+             oninput="document.getElementById('pop-val').textContent=this.value">
+    </div>
+    <div>
+      <label>Generations: <span id="gen-val">8</span></label>
+      <input type="range" id="n-gens" min="3" max="20" value="8"
+             oninput="document.getElementById('gen-val').textContent=this.value">
+    </div>
+    <button class="btn-ga" id="run-btn" onclick="runGA()">▶ Start Evolution</button>
+  </div>
+  <div id="ga-log"></div>
+  <div id="run-result" style="display:none; margin-top:1rem;"></div>
+</div>
+
+{% if has_results %}
+<!-- ── Stats bar ── -->
+{% set last = history[-1] %}
+<div class="cards-grid">
+  <div class="stat-card">
+    <div class="value c-green">{{ "%.4f"|format(last.best_fitness) }}</div>
+    <div class="label">Best CV ROC-AUC</div>
+  </div>
+  <div class="stat-card">
+    <div class="value c-blue">{{ history|length }}</div>
+    <div class="label">Generations Run</div>
+  </div>
+  <div class="stat-card">
+    <div class="value c-purple">{{ last.best_params.n_estimators }}</div>
+    <div class="label">Best n_estimators</div>
+  </div>
+  <div class="stat-card">
+    <div class="value c-orange">{{ last.best_params.max_depth }}</div>
+    <div class="label">Best max_depth</div>
+  </div>
+</div>
+
+<!-- ── Evolution chart ── -->
+<div class="chart-card">
+  <h3>📈 Fitness Evolution Across Generations</h3>
+  <canvas id="evolutionChart" height="80"></canvas>
+</div>
+
+<!-- ── Best Params ── -->
+<div class="chart-card">
+  <h3>🏆 Best Evolved Hyperparameters</h3>
+  <table class="param-table">
+    <thead><tr><th>Parameter</th><th>Evolved Value</th><th>Type</th></tr></thead>
+    <tbody>
+      {% for k, v in best_params.items() %}
+      <tr>
+        <td><code style="color:#c4b5fd;">{{ k }}</code></td>
+        <td><strong>{{ v }}</strong></td>
+        <td>
+          {% if v is float %}<span class="badge badge-blue">float</span>
+          {% else %}<span class="badge badge-purple">int</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Generation log ── -->
+<div class="chart-card">
+  <h3>📋 Generation-by-Generation Log</h3>
+  <div style="overflow-x:auto; max-height:360px; overflow-y:auto;">
+    <table class="gen-table">
+      <thead>
+        <tr>
+          <th>Gen</th><th>Best Fitness</th><th>Mean Fitness</th><th>Std</th><th>Time (s)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set best_gen = history | sort(attribute='best_fitness') | last %}
+        {% for h in history %}
+        <tr class="{{ 'best-row' if h.generation == best_gen.generation else '' }}">
+          <td>{{ h.generation }}</td>
+          <td>{{ "%.5f"|format(h.best_fitness) }}</td>
+          <td>{{ "%.5f"|format(h.mean_fitness) }}</td>
+          <td>{{ "%.5f"|format(h.std_fitness) }}</td>
+          <td>{{ h.elapsed_sec }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="color:#64748b; font-size:.78rem; margin-top:.5rem;">🟢 Highlighted row = generation with overall best fitness.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const evoLog = {{ evolution_log | safe }};
+if (evoLog.length) {
+  const ctx = document.getElementById('evolutionChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: evoLog.map(d => `Gen ${d.generation}`),
+      datasets: [
+        {
+          label: 'Best ROC-AUC',
+          data: evoLog.map(d => d.best_fitness),
+          borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.1)',
+          fill: true, tension: 0.3, pointRadius: 4,
+        },
+        {
+          label: 'Mean ROC-AUC',
+          data: evoLog.map(d => d.mean_fitness),
+          borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.05)',
+          fill: false, tension: 0.3, pointRadius: 3, borderDash: [4,4],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#e2e8f0' } } },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+        y: {
+          ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' },
+          min: Math.max(0, Math.min(...evoLog.map(d=>d.mean_fitness)) - 0.05),
+        },
+      },
+    },
+  });
+}
+</script>
+{% else %}
+<div style="text-align:center; padding:3rem; color:#64748b;">
+  <div style="font-size:3rem; margin-bottom:1rem;">🧬</div>
+  <p>No GA results yet. Run <code>model.py</code> to perform a full optimisation,<br>
+     or use the <strong>Run GA</strong> panel above for a quick demo.</p>
+</div>
+{% endif %}
+
+<script>
+async function runGA() {
+  const btn   = document.getElementById('run-btn');
+  const log   = document.getElementById('ga-log');
+  const res   = document.getElementById('run-result');
+  const pop   = +document.getElementById('pop-size').value;
+  const gens  = +document.getElementById('n-gens').value;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Evolving…';
+  log.style.display = 'block';
+  log.textContent   = `Starting GA: population=${pop}, generations=${gens}\n`;
+  res.style.display = 'none';
+
+  try {
+    const r = await fetch('/api/ga-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ population_size: pop, n_generations: gens }),
+    });
+    const data = await r.json();
+
+    if (data.success) {
+      // Display evolution log
+      data.history.forEach(h => {
+        log.textContent += `Gen ${String(h.generation).padStart(2)} | best=${h.best_fitness.toFixed(4)} | mean=${h.mean_fitness.toFixed(4)}\n`;
+      });
+      log.scrollTop = log.scrollHeight;
+
+      res.style.display = 'block';
+      res.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.8rem;">
+          <div class="stat-card"><div class="value c-green">${data.cv_roc_auc}</div><div class="label">CV ROC-AUC</div></div>
+          <div class="stat-card"><div class="value c-blue">${data.test_roc_auc}</div><div class="label">Test ROC-AUC</div></div>
+          <div class="stat-card"><div class="value c-purple">${data.test_f1}</div><div class="label">Test F1</div></div>
+          <div class="stat-card"><div class="value c-orange">${data.generations}</div><div class="label">Generations</div></div>
+        </div>
+        <div style="margin-top:1rem; background:#0f172a; border-radius:8px; padding:1rem; font-size:.85rem; color:#94a3b8;">
+          <strong style="color:#c4b5fd;">Best params:</strong>
+          <pre style="color:#a3e635; margin:.5rem 0 0 0; white-space:pre-wrap;">${JSON.stringify(data.best_params, null, 2)}</pre>
+        </div>
+        <p style="color:#64748b; font-size:.8rem; margin-top:.5rem;">
+          ✅ Results saved to <code>ga_history.json</code>. 
+          <a href="/ga-optimize" style="color:#8b5cf6;">Refresh page</a> to see updated charts.
+        </p>`;
+    } else {
+      log.textContent += `\n❌ Error: ${data.error}`;
+    }
+  } catch (e) {
+    log.textContent += `\n❌ Fetch error: ${e}`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '▶ Start Evolution';
+}
+</script>
+{% endblock %}

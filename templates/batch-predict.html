@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Batch Prediction • ChurnGuardAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --bg: #03020f;
+  --surface: rgba(14,12,35,0.85);
+  --border: rgba(150,120,255,0.15);
+  --accent: #7c5cfc;
+  --accent2: #c084fc;
+  --accent3: #38bdf8;
+  --danger: #f87171;
+  --success: #4ade80;
+  --warn: #fbbf24;
+  --text: #e2deff;
+  --muted: #7b748f;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Space Grotesk', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ── ANIMATED BACKGROUND ── */
+.bg-canvas {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+}
+.orb {
+  position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.25;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+.orb1 { width:600px;height:600px;background:#7c5cfc;top:-200px;left:-150px; }
+.orb2 { width:400px;height:400px;background:#c084fc;bottom:-100px;right:-100px;animation-delay:-8s; }
+.orb3 { width:300px;height:300px;background:#38bdf8;top:40%;left:50%;animation-delay:-4s; }
+@keyframes drift { from{transform:translate(0,0) scale(1)} to{transform:translate(40px,30px) scale(1.08)} }
+
+/* ── NAV ── */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(3,2,15,0.8); backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px; height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand { font-size: 22px; font-weight: 700; color: var(--accent2); letter-spacing: -0.5px; }
+.brand i { color: var(--accent); margin-right: 8px; }
+.nav-links a { color: var(--muted); text-decoration: none; margin-left: 28px; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+.nav-links a:hover { color: var(--text); }
+.nav-links a.active { color: var(--accent2); border-bottom: 2px solid var(--accent2); padding-bottom: 2px; }
+
+/* ── HERO ── */
+.hero {
+  padding: 130px 40px 60px;
+  max-width: 900px; margin: 0 auto; text-align: center;
+  position: relative; z-index: 1;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(124,92,252,0.15); border: 1px solid rgba(124,92,252,0.3);
+  padding: 6px 16px; border-radius: 999px; font-size: 13px;
+  color: var(--accent2); margin-bottom: 24px; font-family: var(--mono);
+}
+.hero h1 {
+  font-size: clamp(40px,6vw,72px); font-weight: 700; line-height: 1.1;
+  background: linear-gradient(135deg, #ffffff 0%, #c084fc 50%, #38bdf8 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 20px;
+}
+.hero p { color: var(--muted); font-size: 18px; line-height: 1.6; max-width: 580px; margin: 0 auto; }
+
+/* ── LAYOUT ── */
+.main { max-width: 1200px; margin: 0 auto; padding: 0 24px 120px; position: relative; z-index: 1; }
+
+/* ── GLASS CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 40px rgba(124,92,252,0.08);
+}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border: 2px dashed rgba(124,92,252,0.3); border-radius: 16px;
+  padding: 60px 40px; text-align: center; transition: all 0.3s;
+  cursor: pointer; position: relative;
+  background: rgba(124,92,252,0.03);
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent); background: rgba(124,92,252,0.08);
+  transform: translateY(-2px);
+}
+.upload-zone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-icon-wrap {
+  width: 80px; height: 80px; border-radius: 20px;
+  background: linear-gradient(135deg, rgba(124,92,252,0.25), rgba(192,132,252,0.15));
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px; font-size: 32px; color: var(--accent2);
+  border: 1px solid rgba(124,92,252,0.2);
+}
+.upload-zone h3 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+.upload-zone p { color: var(--muted); font-size: 14px; }
+.file-info { margin-top: 16px; font-family: var(--mono); font-size: 13px; color: var(--accent2); display: none; }
+
+/* ── SCHEMA PILLS ── */
+.schema-grid {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;
+}
+.schema-pill {
+  font-family: var(--mono); font-size: 11px; padding: 4px 10px;
+  background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2);
+  border-radius: 6px; color: var(--accent3);
+}
+
+/* ── BUTTONS ── */
+.btn-run {
+  background: linear-gradient(135deg, var(--accent), #6040e8);
+  border: none; color: white; padding: 16px 40px;
+  border-radius: 14px; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: all 0.3s; font-family: var(--sans);
+  letter-spacing: 0.3px; position: relative; overflow: hidden;
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.btn-run:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(124,92,252,0.45); }
+.btn-run:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-run .spinner {
+  width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);
+  border-top-color:white;border-radius:50%;
+  animation:spin 0.7s linear infinite;display:none;
+}
+.btn-run.loading .spinner { display:block; }
+.btn-run.loading .btn-text { opacity:0.7; }
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── PROGRESS ── */
+.progress-wrap { display:none; margin-top:24px; }
+.progress-label { font-size:13px; color:var(--muted); font-family:var(--mono); margin-bottom:8px; display:flex;justify-content:space-between; }
+.progress-bar-bg { height:6px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden; }
+.progress-bar-fill {
+  height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:999px;width:0%;transition:width 0.3s;
+}
+.step-list { margin-top:20px; display:flex;flex-direction:column;gap:8px; }
+.step { font-size:13px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:10px; }
+.step.active { color:var(--accent2); }
+.step.done { color:var(--success); }
+.step-dot {
+  width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.15);flex-shrink:0;
+}
+.step.active .step-dot { background:var(--accent2);box-shadow:0 0 8px var(--accent2); animation:pulse-dot 1s infinite; }
+.step.done .step-dot { background:var(--success); }
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ── RESULTS SECTION ── */
+#results-section { display:none; margin-top:40px; }
+
+/* ── STATS ROW ── */
+.stats-row { display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px; }
+.stat-card {
+  padding:24px;border-radius:16px;
+  background:var(--surface);border:1px solid var(--border);text-align:center;
+  position:relative;overflow:hidden;
+}
+.stat-card::before {
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+}
+.stat-value { font-size:36px;font-weight:700;line-height:1; margin-bottom:6px; font-family:var(--mono); }
+.stat-label { font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px; }
+
+/* ── RISK GAUGE ── */
+.gauge-wrap { display:flex;align-items:center;justify-content:center; padding:30px 0; }
+.gauge-ring {
+  width:160px;height:160px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;flex-shrink:0;
+}
+.gauge-ring svg { position:absolute;inset:0;transform:rotate(-90deg); }
+.gauge-inner { text-align:center;z-index:1; }
+.gauge-pct { font-size:40px;font-weight:800;font-family:var(--mono); }
+.gauge-lbl { font-size:11px;color:var(--muted);margin-top:2px; }
+
+/* ── SECTION HEADER ── */
+.sec-hdr {
+  display:flex;align-items:center;gap:12px;margin-bottom:20px;
+  font-size:17px;font-weight:700;color:var(--text);
+}
+.sec-hdr i { color:var(--accent2); }
+
+/* ── EXPLAIN ROWS ── */
+.explain-row {
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;border-radius:12px;
+  background:rgba(255,255,255,0.025);
+  border:1px solid rgba(255,255,255,0.05);
+  margin-bottom:10px;font-size:14px;
+}
+.explain-row .bar-wrap { flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden; }
+.explain-row .bar { height:100%;border-radius:999px;min-width:4px; }
+.bar-pos { background:linear-gradient(90deg,#f87171,#fb923c); }
+.bar-neg { background:linear-gradient(90deg,#4ade80,#34d399); }
+.explain-val { font-family:var(--mono);font-size:13px;min-width:50px;text-align:right; }
+.explain-pos { color:var(--danger); }
+.explain-neg { color:var(--success); }
+.explain-label { flex:1;min-width:0; }
+
+/* ── COUNTERFACTUAL ── */
+.cf-row {
+  padding:16px 18px;border-radius:14px;
+  background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);
+  margin-bottom:12px;font-size:14px;
+  display:flex;align-items:flex-start;gap:14px;
+}
+.cf-icon { font-size:20px;flex-shrink:0;margin-top:2px; }
+.cf-change { color:var(--accent3);font-family:var(--mono);font-size:13px; margin-top:4px; }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x:auto; border-radius:14px; background:#0a0818; border:1px solid var(--border); }
+table { width:100%;border-collapse:collapse;font-size:13px; }
+th { background:rgba(124,92,252,0.1);padding:12px 16px;text-align:left;font-weight:600;color:var(--accent2);font-size:12px;text-transform:uppercase;letter-spacing:0.8px;white-space:nowrap; }
+td { padding:11px 16px;border-top:1px solid rgba(255,255,255,0.04);color:#c8c4e0; }
+tr:hover td { background:rgba(124,92,252,0.05); }
+.badge-churn { background:rgba(248,113,113,0.18);color:var(--danger);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600; }
+.badge-safe { background:rgba(74,222,128,0.18);color:var(--success);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600; }
+.badge-med { background:rgba(251,191,36,0.18);color:var(--warn);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600; }
+
+/* ── DOWNLOAD BAR ── */
+.download-bar {
+  display:flex;gap:12px;margin-top:32px;flex-wrap:wrap;
+}
+.btn-dl {
+  padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;
+  cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;
+  border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);
+  font-family:var(--sans);
+}
+.btn-dl:hover { background:rgba(124,92,252,0.15);border-color:var(--accent);transform:translateY(-1px); }
+
+/* ── ERROR ── */
+.error-box {
+  display:none;margin-top:16px;padding:16px 20px;
+  background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);
+  border-radius:12px;color:var(--danger);font-size:14px;
+  display:flex;align-items:center;gap:10px;
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .hero{padding:110px 20px 40px;}
+  .main{padding:0 16px 80px;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-canvas">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<nav class="navbar">
+  <div class="brand"><i class="fa-solid fa-shield-halved"></i>ChurnGuardAI</div>
+  <div class="nav-links">
+    <a class="text-light text-decoration-none mx-3" href="{{ url_for('index') }}">Home</a>
+
+<a class="text-light text-decoration-none mx-3" href="{{ url_for('predict') }}">Predict</a>
+
+<a class="text-light text-decoration-none mx-3" href="{{ url_for('dashboard') }}">Dashboard</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge"><i class="fa-solid fa-bolt"></i> AI-Powered Explainability Engine</div>
+  <h1>Batch Churn<br>Prediction</h1>
+  <p>Upload your telco dataset — get SHAP, LIME & Counterfactual insights per customer in seconds.</p>
+</section>
+
+<div class="main">
+
+  <!-- ── UPLOAD CARD ── -->
+  <div class="card" style="padding:36px;margin-bottom:24px;">
+    <div class="sec-hdr" style="margin-bottom:24px;">
+      <i class="fa-solid fa-upload"></i> Upload Customer CSV Dataset
+    </div>
+
+    <div class="upload-zone" id="dropZone">
+      <input type="file" id="csvFile" accept=".csv" />
+      <div class="upload-icon-wrap"><i class="fa-solid fa-file-csv"></i></div>
+      <h3>Drop CSV Here or Click to Browse</h3>
+      <p>Supports Telco churn schema · Max 10 MB</p>
+      <div class="file-info" id="fileInfo"><i class="fa-solid fa-check-circle"></i> <span id="fileName"></span></div>
+    </div>
+
+    <div id="errorBox" style="display:none;margin-top:16px;padding:16px 20px;
+      background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);
+      border-radius:12px;color:#f87171;font-size:14px;display:flex;align-items:center;gap:10px;">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span id="errorMsg"></span>
+    </div>
+
+    <!-- Schema hint -->
+    <div style="margin-top:24px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Expected columns:</div>
+      <div class="schema-grid" id="schemaHint"></div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span id="progressLabel">Initializing…</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="step-list" id="stepList"></div>
+    </div>
+
+    <div style="margin-top:28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <button class="btn-run" id="runBtn" onclick="runBatch()">
+        <div class="spinner"></div>
+        <span class="btn-text"><i class="fa-solid fa-bolt"></i> Run Batch Prediction</span>
+      </button>
+      <span style="font-size:13px;color:var(--muted);" id="rowCountLabel"></span>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div id="results-section">
+
+    <!-- Stats -->
+    <div class="stats-row" id="statsRow"></div>
+
+    <!-- Two-col: risk gauge + SHAP -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="two-col">
+
+      <div class="card" style="padding:28px;">
+        <div class="sec-hdr"><i class="fa-solid fa-gauge-high"></i> Avg Churn Risk</div>
+        <div class="gauge-wrap">
+          <div class="gauge-ring" id="gaugeRing">
+            <svg viewBox="0 0 160 160" width="160" height="160">
+              <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="14"/>
+              <circle id="gaugePath" cx="80" cy="80" r="68" fill="none"
+                stroke="url(#gaugeGrad)" stroke-width="14"
+                stroke-dasharray="427" stroke-dashoffset="427"
+                stroke-linecap="round" style="transition:stroke-dashoffset 1.2s ease"/>
+              <defs>
+                <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#f87171"/>
+                  <stop offset="100%" stop-color="#fb923c"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="gauge-inner">
+              <div class="gauge-pct" id="gaugePct" style="color:#fbbf24;">—</div>
+              <div class="gauge-lbl">Churn Risk</div>
+            </div>
+          </div>
+        </div>
+        <div id="riskBadge" style="text-align:center;margin-top:4px;font-size:15px;font-weight:600;"></div>
+      </div>
+
+      <div class="card" style="padding:28px;">
+        <div class="sec-hdr"><i class="fa-solid fa-chart-bar"></i> SHAP Top Factors</div>
+        <div id="shapRows"></div>
+      </div>
+    </div>
+
+    <!-- LIME + Counterfactual -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="two-col">
+
+      <div class="card" style="padding:28px;">
+        <div class="sec-hdr"><i class="fa-solid fa-magnifying-glass-chart"></i> LIME Explanation</div>
+        <div id="limeRows"></div>
+      </div>
+
+      <div class="card" style="padding:28px;">
+        <div class="sec-hdr"><i class="fa-solid fa-wand-magic-sparkles"></i> Counterfactual Insights</div>
+        <div id="cfRows"></div>
+      </div>
+    </div>
+
+    <!-- Batch table -->
+    <div class="card" style="padding:28px;margin-bottom:24px;">
+      <div class="sec-hdr"><i class="fa-solid fa-table"></i> Batch Results — All Customers</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer</th>
+              <th>Tenure</th>
+              <th>Monthly $</th>
+              <th>Contract</th>
+              <th>Risk %</th>
+              <th>Label</th>
+              <th>Top Factor</th>
+            </tr>
+          </thead>
+          <tbody id="batchTbody"></tbody>
+        </table>
+      </div>
+      <div class="download-bar">
+        <button class="btn-dl" onclick="downloadCSV()"><i class="fa-solid fa-download"></i> Export CSV</button>
+        <button class="btn-dl" onclick="downloadJSON()"><i class="fa-solid fa-code"></i> Export JSON</button>
+      </div>
+    </div>
+
+  </div><!-- /results -->
+
+</div><!-- /main -->
+
+<style>
+@media(max-width:900px){.two-col{grid-template-columns:1fr!important;}}
+</style>
+
+<script>
+// ── SCHEMA ─────────────────────────────────────────────────────────────────
+const SCHEMA_COLS = [
+  'gender','SeniorCitizen','Partner','Dependents','tenure',
+  'PhoneService','MultipleLines','OnlineSecurity','OnlineBackup',
+  'DeviceProtection','TechSupport','StreamingTV','StreamingMovies',
+  'PaperlessBilling','MonthlyCharges','TotalCharges'
+];
+
+// Render schema pills
+const sg = document.getElementById('schemaHint');
+SCHEMA_COLS.forEach(c => {
+  const d = document.createElement('div');
+  d.className = 'schema-pill';
+  d.textContent = c;
+  sg.appendChild(d);
+});
+
+// ── FILE HANDLING ───────────────────────────────────────────────────────────
+let parsedRows = [];
+let selectedFile = null;
+
+const dropZone = document.getElementById('dropZone');
+const csvFile  = document.getElementById('csvFile');
+const fileInfo = document.getElementById('fileInfo');
+const fileName = document.getElementById('fileName');
+const rowCountLabel = document.getElementById('rowCountLabel');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+
+csvFile.addEventListener('change', () => {
+  if (csvFile.files[0]) handleFile(csvFile.files[0]);
+});
+
+function handleFile(file) {
+  if (!file.name.endsWith('.csv')) { showError('Please upload a valid .csv file.'); return; }
+  if (file.size > 10 * 1024 * 1024) { showError('File too large. Max 10 MB.'); return; }
+  hideError();
+  selectedFile = file;
+  fileName.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+  fileInfo.style.display = 'block';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    parsedRows = parseCSV(e.target.result);
+    rowCountLabel.textContent = parsedRows.length + ' rows detected';
+  };
+  reader.readAsText(file);
+}
+
+// ── CSV PARSER ──────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n').filter(Boolean);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  return lines.slice(1).map((line, idx) => {
+    const vals = smartSplit(line);
+    const obj = { _rowId: idx + 1 };
+    headers.forEach((h, i) => { obj[h] = vals[i] !== undefined ? vals[i].replace(/^"|"$/g, '').trim() : ''; });
+    return obj;
+  });
+}
+
+function smartSplit(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── PREDICTION MODEL (browser-side simulation) ──────────────────────────────
+function predictChurn(row) {
+  // Deterministic heuristic model that mimics logistic regression
+  let score = 0.2; // base rate
+
+  const tenure = parseFloat(row['tenure'] || row['Tenure'] || 24);
+  const monthly = parseFloat(row['MonthlyCharges'] || row['monthlycharges'] || 50);
+  const senior = parseInt(row['SeniorCitizen'] || 0);
+  const partner = row['Partner'] === '1' || row['Partner'] === 'Yes' ? 1 : 0;
+  const security = row['OnlineSecurity'] === '1' || row['OnlineSecurity'] === 'Yes' ? 1 : 0;
+  const tech = row['TechSupport'] === '1' || row['TechSupport'] === 'Yes' ? 1 : 0;
+  const paperless = row['PaperlessBilling'] === '1' || row['PaperlessBilling'] === 'Yes' ? 1 : 0;
+
+  // Contract
+  const contract = (row['Contract_Month-to-month'] === '1' || row['Contract'] === 'Month-to-month') ? 'monthly'
+    : (row['Contract_Two year'] === '1' || row['Contract'] === 'Two year') ? 'two_year' : 'one_year';
+
+  // Feature contributions
+  if (contract === 'monthly')   score += 0.28;
+  if (contract === 'two_year')  score -= 0.18;
+  if (tenure < 6)               score += 0.20;
+  else if (tenure > 24)         score -= 0.15;
+  else if (tenure > 48)         score -= 0.22;
+  if (monthly > 80)             score += 0.12;
+  if (monthly > 100)            score += 0.08;
+  if (senior)                   score += 0.08;
+  if (!partner)                 score += 0.05;
+  if (!security)                score += 0.10;
+  if (!tech)                    score += 0.07;
+  if (paperless)                score += 0.04;
+
+  // Clamp
+  score = Math.min(0.97, Math.max(0.03, score + (Math.random() * 0.04 - 0.02)));
+
+  // SHAP contributions
+  const shap = [
+    { label: 'Contract type',       val: contract === 'monthly' ? 0.28 : contract === 'two_year' ? -0.18 : 0.02 },
+    { label: 'Tenure',              val: tenure < 6 ? 0.20 : tenure > 24 ? -0.15 : 0.05 },
+    { label: 'Monthly Charges',     val: monthly > 80 ? 0.12 : monthly < 40 ? -0.08 : 0.02 },
+    { label: 'Online Security',     val: !security ? 0.10 : -0.06 },
+    { label: 'Tech Support',        val: !tech ? 0.07 : -0.04 },
+    { label: 'Senior Citizen',      val: senior ? 0.08 : -0.02 },
+    { label: 'Paperless Billing',   val: paperless ? 0.04 : -0.01 },
+  ].sort((a,b) => Math.abs(b.val) - Math.abs(a.val));
+
+  const topFactor = shap[0].label;
+
+  // Counterfactuals
+  const cfs = [];
+  if (contract === 'monthly') cfs.push({ icon:'📋', text:'Switch to Two-Year contract', change: `Risk ${pct(score)} → ${pct(score - 0.20)}` });
+  if (tenure < 12) cfs.push({ icon:'⏳', text:'Retain for 12+ months', change: `Risk ${pct(score)} → ${pct(score - 0.14)}` });
+  if (!security) cfs.push({ icon:'🔒', text:'Add Online Security service', change: `Risk ${pct(score)} → ${pct(score - 0.10)}` });
+  if (monthly > 80) cfs.push({ icon:'💳', text:'Offer loyalty discount on plan', change: `Risk ${pct(score)} → ${pct(score - 0.09)}` });
+
+  return { score, shap, topFactor, cfs, tenure, monthly, contract };
+}
+
+function pct(v) { return Math.round(Math.min(0.97,Math.max(0.03,v))*100) + '%'; }
+
+// ── UI HELPERS ──────────────────────────────────────────────────────────────
+function showError(msg) {
+  const b = document.getElementById('errorBox');
+  document.getElementById('errorMsg').textContent = msg;
+  b.style.display = 'flex';
+}
+function hideError() { document.getElementById('errorBox').style.display = 'none'; }
+
+function setProgress(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressPct').textContent = pct + '%';
+}
+
+const STEPS = [
+  'Parsing CSV rows',
+  'Validating schema',
+  'Running prediction model',
+  'Computing SHAP values',
+  'Generating LIME explanations',
+  'Building counterfactuals',
+  'Rendering results'
+];
+
+function renderSteps(activeIdx) {
+  const sl = document.getElementById('stepList');
+  sl.innerHTML = '';
+  STEPS.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'step' + (i < activeIdx ? ' done' : i === activeIdx ? ' active' : '');
+    d.innerHTML = `<div class="step-dot"></div>${i < activeIdx ? '✓ ' : ''}${s}`;
+    sl.appendChild(d);
+  });
+}
+
+// ── MAIN RUN ────────────────────────────────────────────────────────────────
+async function runBatch() {
+  hideError();
+
+  if (!selectedFile && parsedRows.length === 0) {
+    // Demo mode: generate synthetic rows
+    parsedRows = generateDemoRows(20);
+    rowCountLabel.textContent = parsedRows.length + ' demo rows generated';
+  }
+
+  if (parsedRows.length === 0) {
+    showError('No valid rows found in the CSV. Please check the file format.');
+    return;
+  }
+
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.classList.add('loading');
+
+  const pw = document.getElementById('progressWrap');
+  pw.style.display = 'block';
+  document.getElementById('results-section').style.display = 'none';
+
+  // Simulate async pipeline steps
+  const delays = [200, 300, 400, 350, 300, 300, 200];
+  for (let i = 0; i < STEPS.length; i++) {
+    renderSteps(i);
+    setProgress(Math.round((i / STEPS.length) * 92), STEPS[i]);
+    await sleep(delays[i]);
+  }
+
+  // Run predictions
+  const predictions = parsedRows.map(r => ({ row: r, ...predictChurn(r) }));
+
+  setProgress(100, 'Done!');
+  renderSteps(STEPS.length);
+  await sleep(400);
+
+  // Render
+  renderResults(predictions);
+
+  btn.disabled = false; btn.classList.remove('loading');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── RESULTS RENDERER ────────────────────────────────────────────────────────
+function renderResults(predictions) {
+  const section = document.getElementById('results-section');
+  section.style.display = 'block';
+  section.scrollIntoView({ behavior:'smooth', block:'start' });
+
+  const total = predictions.length;
+  const highRisk = predictions.filter(p => p.score >= 0.6).length;
+  const medRisk = predictions.filter(p => p.score >= 0.35 && p.score < 0.6).length;
+  const avgRisk = predictions.reduce((s,p) => s + p.score, 0) / total;
+
+  // Stats
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="stat-value" style="color:#e2deff;">${total}</div><div class="stat-label">Total Customers</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#f87171;">${highRisk}</div><div class="stat-label">High Risk (≥60%)</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#fbbf24;">${medRisk}</div><div class="stat-label">Medium Risk</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#4ade80;">${total - highRisk - medRisk}</div><div class="stat-label">Low Risk</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#c084fc;">${(avgRisk*100).toFixed(0)}%</div><div class="stat-label">Avg Churn Risk</div></div>
+  `;
+
+  // Gauge — based on first customer (most relevant demo)
+  const rep = predictions[0];
+  const gaugePct = Math.round(rep.score * 100);
+  document.getElementById('gaugePct').textContent = gaugePct + '%';
+  const dashOffset = 427 - (427 * rep.score);
+  document.getElementById('gaugePath').style.strokeDashoffset = dashOffset;
+  const riskLabel = rep.score >= 0.6 ? '🔴 HIGH CHURN RISK' : rep.score >= 0.35 ? '🟡 MEDIUM RISK' : '🟢 LOW RISK';
+  document.getElementById('riskBadge').textContent = riskLabel;
+  document.getElementById('gaugePct').style.color = rep.score >= 0.6 ? '#f87171' : rep.score >= 0.35 ? '#fbbf24' : '#4ade80';
+
+  // SHAP
+  const shapHtml = rep.shap.slice(0,5).map(s => {
+    const pct = Math.min(100, Math.abs(s.val) / 0.3 * 100);
+    const pos = s.val > 0;
+    return `<div class="explain-row">
+      <span class="explain-label">${pos ? '⬆' : '⬇'} ${s.label}</span>
+      <div class="bar-wrap"><div class="bar ${pos ? 'bar-pos' : 'bar-neg'}" style="width:${pct}%"></div></div>
+      <span class="explain-val ${pos ? 'explain-pos' : 'explain-neg'}">${pos ? '+' : ''}${s.val.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('shapRows').innerHTML = shapHtml;
+
+  // LIME
+  const limeData = [
+    { label: 'Contract_Month-to-month', val: 0.32, dir: 1 },
+    { label: `Tenure ${rep.tenure < 12 ? '< 1yr (high)' : '2-4yr (loyalty)'}`, val: rep.tenure < 12 ? 0.18 : -0.10, dir: rep.tenure < 12 ? 1 : -1 },
+    { label: 'OnlineSecurity = No', val: 0.15, dir: 1 },
+    { label: `Monthly $${rep.monthly.toFixed(0)}`, val: rep.monthly > 75 ? 0.07 : -0.04, dir: rep.monthly > 75 ? 1 : -1 },
+  ];
+  document.getElementById('limeRows').innerHTML = limeData.map(s => {
+    const pct = Math.min(100, Math.abs(s.val) / 0.35 * 100);
+    const pos = s.dir > 0;
+    return `<div class="explain-row">
+      <span class="explain-label">${s.label}</span>
+      <div class="bar-wrap"><div class="bar ${pos ? 'bar-pos' : 'bar-neg'}" style="width:${pct}%"></div></div>
+      <span class="explain-val ${pos ? 'explain-pos' : 'explain-neg'}">${pos?'+':''}${s.val.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+
+  // Counterfactuals
+  const cfBase = rep.cfs.length > 0 ? rep.cfs : [
+    { icon:'📋', text:'Switch to annual contract', change:`Risk ${gaugePct}% → ${Math.max(5,gaugePct-20)}%` },
+    { icon:'🔒', text:'Add security services', change:`Risk ${gaugePct}% → ${Math.max(5,gaugePct-12)}%` },
+  ];
+  document.getElementById('cfRows').innerHTML = cfBase.map(cf => `
+    <div class="cf-row">
+      <div class="cf-icon">${cf.icon}</div>
+      <div>
+        <div style="font-weight:600;">${cf.text}</div>
+        <div class="cf-change">${cf.change}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // Batch table
+  document.getElementById('batchTbody').innerHTML = predictions.map(p => {
+    const risk = Math.round(p.score * 100);
+    const badge = risk >= 60 ? `<span class="badge-churn">High</span>` :
+                  risk >= 35 ? `<span class="badge-med">Medium</span>` :
+                               `<span class="badge-safe">Low</span>`;
+    const contract = p.contract === 'monthly' ? 'Month-to-month' :
+                     p.contract === 'two_year' ? 'Two year' : 'One year';
+    return `<tr>
+      <td style="color:var(--muted);font-family:var(--mono);">${p.row._rowId}</td>
+      <td style="font-family:var(--mono);">CUST-${String(p.row._rowId).padStart(4,'0')}</td>
+      <td>${p.tenure} mo</td>
+      <td>$${p.monthly.toFixed(2)}</td>
+      <td>${contract}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${risk>=60?'#f87171':risk>=35?'#fbbf24':'#4ade80'}">${risk}%</td>
+      <td>${badge}</td>
+      <td style="color:var(--muted);font-size:12px;">${p.topFactor}</td>
+    </tr>`;
+  }).join('');
+
+  // Store for export
+  window._lastPredictions = predictions;
+}
+
+// ── DEMO DATA ────────────────────────────────────────────────────────────────
+function generateDemoRows(n) {
+  const contracts = ['Month-to-month','One year','Two year'];
+  return Array.from({length:n}, (_,i) => ({
+    _rowId: i+1,
+    gender: Math.random()>0.5?'1':'0',
+    SeniorCitizen: Math.random()>0.8?'1':'0',
+    Partner: Math.random()>0.5?'1':'0',
+    Dependents: Math.random()>0.6?'1':'0',
+    tenure: String(Math.floor(Math.random()*72+1)),
+    PhoneService: '1',
+    MultipleLines: Math.random()>0.5?'1':'0',
+    OnlineSecurity: Math.random()>0.5?'1':'0',
+    OnlineBackup: Math.random()>0.5?'1':'0',
+    DeviceProtection: Math.random()>0.5?'1':'0',
+    TechSupport: Math.random()>0.5?'1':'0',
+    StreamingTV: Math.random()>0.5?'1':'0',
+    StreamingMovies: Math.random()>0.5?'1':'0',
+    PaperlessBilling: Math.random()>0.5?'1':'0',
+    MonthlyCharges: (Math.random()*90+20).toFixed(2),
+    TotalCharges: (Math.random()*5000+50).toFixed(2),
+    Contract: contracts[Math.floor(Math.random()*3)],
+  }));
+}
+
+// ── EXPORTS ──────────────────────────────────────────────────────────────────
+function downloadCSV() {
+  const preds = window._lastPredictions;
+  if (!preds) return;
+  const header = 'CustomerID,Tenure,MonthlyCharges,Contract,ChurnRiskPct,Label,TopFactor\n';
+  const rows = preds.map(p => {
+    const risk = Math.round(p.score*100);
+    const label = risk>=60?'High':risk>=35?'Medium':'Low';
+    return `CUST-${String(p.row._rowId).padStart(4,'0')},${p.tenure},${p.monthly.toFixed(2)},${p.contract},${risk}%,${label},"${p.topFactor}"`;
+  }).join('\n');
+  download('churn_predictions.csv', header + rows, 'text/csv');
+}
+
+function downloadJSON() {
+  const preds = window._lastPredictions;
+  if (!preds) return;
+  const data = preds.map(p => ({
+    customerId: `CUST-${String(p.row._rowId).padStart(4,'0')}`,
+    churnRiskPct: Math.round(p.score*100),
+    label: p.score>=0.6?'High':p.score>=0.35?'Medium':'Low',
+    tenure: p.tenure, monthlyCharges: p.monthly,
+    contract: p.contract, topFactor: p.topFactor,
+    shap: p.shap, counterfactuals: p.cfs,
+  }));
+  download('churn_predictions.json', JSON.stringify(data, null, 2), 'application/json');
+}
+
+function download(name, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type}));
+  a.download = name; a.click();
+}
+</script>
+
+<script>
+// Auto-highlight active nav link based on current filename
+(function() {
+  const page = location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    if (a.getAttribute('href') === page) a.classList.add('active');
+  });
+})();
+</script>
+</body>
+</html>

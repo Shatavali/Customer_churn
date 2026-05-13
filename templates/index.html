@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChurnGuard AI · Dark</title>
+  <!-- Bootstrap 5 + icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: #0b0b17; /* deep dark base */
+      color: #e0e0f0;
+      line-height: 1.6;
+    }
+
+    /* smooth gradient animated background */
+    .hero-section {
+      background: radial-gradient(circle at 30% 40%, #1e1a3a, #0c0c1a 80%);
+      padding: 140px 20px 100px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.1"><path d="M20 30 Q 40 10 60 30 T 90 30" stroke="%234c3ecf" fill="none" stroke-width="0.6"/><circle cx="70" cy="60" r="3" fill="%237b6aff"/><circle cx="25" cy="70" r="4" fill="%239f7aea"/></svg>');
+      background-size: 300px;
+      pointer-events: none;
+    }
+
+    /* ----- navbar (dark, glass) ----- */
+    .navbar {
+      background: rgba(15, 15, 30, 0.85) !important;
+      backdrop-filter: blur(16px) saturate(180%);
+      border-bottom: 1px solid rgba(110, 90, 220, 0.25);
+      box-shadow: 0 10px 35px -10px rgba(0, 0, 0, 0.7);
+      padding: 0.9rem 2rem;
+    }
+    .navbar-brand {
+      font-size: 1.7rem;
+      font-weight: 700;
+      background: linear-gradient(145deg, #b7abff, #7f6aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+    .navbar-brand i {
+      background: none;
+      -webkit-text-fill-color: #6c5ce7;
+      margin-right: 8px;
+      font-size: 1.8rem;
+    }
+    .nav-link {
+      color: #cdc7f0 !important;
+      font-weight: 500;
+      margin: 0 12px;
+      padding: 8px 0 !important;
+      transition: 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-link:hover {
+      color: #ffffff !important;
+      border-bottom-color: #9b8cff;
+    }
+
+    /* ----- hero typography & CTA ----- */
+    .hero-section h1 {
+      font-size: 3.8rem;
+      font-weight: 800;
+      background: linear-gradient(to right, #f0eaff, #cfc3ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 8px #5142b0;
+      letter-spacing: -1px;
+      animation: glowPulse 3s infinite alternate;
+    }
+    @keyframes glowPulse {
+      0% { text-shadow: 0 0 15px #4439b0; }
+      100% { text-shadow: 0 0 30px #8f7cff; }
+    }
+    .hero-section p {
+      font-size: 1.25rem;
+      color: #b8b2e6;
+      max-width: 750px;
+      margin-left: auto;
+      margin-right: auto;
+      background: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(4px);
+      padding: 18px 30px;
+      border-radius: 70px;
+      border: 1px solid rgba(160, 140, 255, 0.25);
+    }
+
+    /* ----- glass stat cards (dark) ----- */
+    .stats-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 35px;
+      margin: 70px 0 30px;
+    }
+    .stat-card {
+      background: rgba(20, 18, 40, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(160, 140, 255, 0.3);
+      border-radius: 42px;
+      padding: 35px 45px;
+      min-width: 220px;
+      color: white;
+      transition: 0.3s ease;
+      box-shadow: 0 25px 40px -15px black;
+    }
+    .stat-card:hover {
+      transform: translateY(-8px);
+      border-color: #a28eff;
+      background: rgba(35, 28, 70, 0.9);
+    }
+    .stat-card i {
+      font-size: 3.3rem;
+      background: linear-gradient(45deg, #a48eff, #ddb4ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 15px;
+    }
+    .stat-number {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(to right, #f2ecff, #d3c5ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.2;
+    }
+    .stat-label {
+      font-size: 1rem;
+      letter-spacing: 1.5px;
+      color: #b4abec;
+      text-transform: uppercase;
+    }
+
+    /* ----- cta button (neon) ----- */
+    .cta-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(20, 15, 50, 0.7);
+      backdrop-filter: blur(8px);
+      border: 2px solid #9d8aff;
+      color: #e2daff;
+      padding: 16px 52px;
+      border-radius: 60px;
+      font-weight: 600;
+      font-size: 1.35rem;
+      transition: 0.3s;
+      box-shadow: 0 0 20px #584acf;
+      text-decoration: none;
+    }
+    .cta-button:hover {
+      background: #7a67ee;
+      color: #0a0a14;
+      border-color: #c0b3ff;
+      box-shadow: 0 0 40px #a28eff;
+      transform: scale(1.03);
+    }
+
+    /* ----- features section (dark card grid) ----- */
+    .features-section {
+      background: #0e0e1a;
+      border-radius: 60px 60px 0 0;
+      padding: 90px 20px 100px;
+      margin-top: 30px;
+      box-shadow: inset 0 30px 40px -30px #19152b;
+    }
+    .section-title {
+      text-align: center;
+      font-size: 2.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #dcd3ff, #a58eff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 70px;
+      letter-spacing: -0.5px;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 35px;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+    .feature-card {
+      background: #141225;
+      border: 1px solid #2b2547;
+      border-radius: 36px;
+      padding: 40px 25px;
+      text-align: center;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      box-shadow: 0 20px 30px -15px #010007;
+      backdrop-filter: blur(5px);
+    }
+    .feature-card:hover {
+      border-color: #927dff;
+      background: #1c1738;
+      transform: translateY(-8px) scale(1.01);
+      box-shadow: 0 35px 45px -15px #160f38;
+    }
+    .feature-icon {
+      width: 90px;
+      height: 90px;
+      background: linear-gradient(145deg, #2a2355, #181330);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      border: 1px solid #5f4db9;
+      box-shadow: inset 0 2px 5px #1b153a, 0 15px 20px -10px #020012;
+    }
+    .feature-icon i {
+      font-size: 3rem;
+      background: linear-gradient(to bottom, #cfbdff, #9d83ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .feature-card h3 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      color: #e8deff;
+    }
+    .feature-card p {
+      color: #aaa5cf;
+      margin-bottom: 25px;
+    }
+    .feature-link {
+      color: #b7a4ff;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px dashed #4d40a0;
+      padding-bottom: 3px;
+    }
+    .feature-link i {
+      transition: transform 0.2s;
+    }
+    .feature-card:hover .feature-link i {
+      transform: translateX(5px);
+    }
+
+    /* ----- footer (dark sleek) ----- */
+    .footer {
+      background: #070612;
+      color: #7b72a5;
+      text-align: center;
+      padding: 40px 20px;
+      border-top: 1px solid #2c254a;
+      font-size: 1.05rem;
+    }
+    .footer small {
+      color: #544e7a;
+    }
+
+    /* ----- responsiveness ----- */
+    @media (max-width: 768px) {
+      .hero-section h1 { font-size: 2.7rem; }
+      .stat-card { padding: 25px 30px; }
+      .stat-number { font-size: 2.4rem; }
+      .navbar-brand { font-size: 1.4rem; }
+    }
+
+    /* additional glow & polish */
+    .navbar-toggler-icon {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(170, 150, 255, 0.9)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Dark glass navbar -->
+  <nav class="navbar navbar-expand-lg fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="/">
+        <i class="fas fa-chart-line"></i> ChurnGuard<span style="background: none; -webkit-text-fill-color: #a98eff;">AI</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="/predict">Predict</a></li>
+          <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="/batch-predict">Batch Upload</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero with improved dark theme & stats -->
+  <div class="hero-section">
+    <div class="container text-center">
+      <h1>Predict churn · before it happens</h1>
+      <p class="mx-auto">
+        <i class="fas fa-crown me-2" style="color: #b194ff;"></i> 
+        AI trained on 7k+ customers · 84% accuracy · realtime retention insights
+      </p>
+      <a href="/predict" class="cta-button mt-3">
+        <span>Launch live demo</span> <i class="fas fa-arrow-right"></i>
+      </a>
+
+      <!-- stats cards (dark glass) -->
+      <div class="stats-container">
+        <div class="stat-card">
+          <i class="fas fa-chart-simple"></i>
+          <div class="stat-number">84%</div>
+          <div class="stat-label">ROC AUC</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-database"></i>
+          <div class="stat-number">7,043</div>
+          <div class="stat-label">customers</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-triangle-exclamation"></i>
+          <div class="stat-number">26.5%</div>
+          <div class="stat-label">churn rate</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- features (dark cards with neon touch) -->
+  <div class="features-section">
+    <div class="container">
+      <h2 class="section-title">intelligent retention engine</h2>
+
+      <div class="feature-grid">
+        <!-- card 1 -->
+        <div class="feature-card" onclick="window.location.href='/predict'">
+          <div class="feature-icon"><i class="fas fa-brain"></i></div>
+          <h3>deep learning core</h3>
+          <p>Ensemble model with 84% accuracy, trained on telecom behavior & demographics.</p>
+          <span class="feature-link">try now <i class="fas fa-arrow-right"></i></span>
+        </div>
+        <!-- card 2 -->
+        <div class="feature-card" onclick="window.location.href='/predict'">
+          <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+          <h3>sub-second inference</h3>
+          <p>Real‑time scoring with probability breakdown & risk factors.</p>
+          <span class="feature-link">try now <i class="fas fa-arrow-right"></i></span>
+        </div>
+        <!-- card 3 -->
+        <div class="feature-card" onclick="window.location.href='/dashboard'">
+          <div class="feature-icon"><i class="fas fa-chart-pie"></i></div>
+          <h3>live analytics</h3>
+          <p>Interactive cohort explorer, churn drivers & revenue at stake.</p>
+          <span class="feature-link">dashboard <i class="fas fa-arrow-right"></i></span>
+        </div>
+        <!-- card 4 -->
+        <div class="feature-card" onclick="window.location.href='/batch-predict'">
+          <div class="feature-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+          <h3>batch processor</h3>
+          <p>Upload CSV, predict thousands of rows, download enriched reports.</p>
+          <span class="feature-link">upload <i class="fas fa-arrow-right"></i></span>
+        </div>
+        <!-- card 5 -->
+        <div class="feature-card" onclick="window.location.href='/predict'">
+          <div class="feature-icon"><i class="fas fa-lightbulb"></i></div>
+          <h3>retention playbooks</h3>
+          <p>Personalized offers, risk triggers, and next‑best‑action suggestions.</p>
+          <span class="feature-link">strategies <i class="fas fa-arrow-right"></i></span>
+        </div>
+        <!-- card 6 -->
+        <div class="feature-card" onclick="window.location.href='/dashboard'">
+          <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
+          <h3>what‑if simulator</h3>
+          <p>Test retention campaigns before launch: estimate impact.</p>
+          <span class="feature-link">explore <i class="fas fa-arrow-right"></i></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- footer dark -->
+  <div class="footer">
+    <div class="container">
+      <p><i class="far fa-copyright me-1"></i> 2025 ChurnGuard AI — telecom intelligence</p>
+      <p class="mt-2"><small>built with <i class="fas fa-heart" style="color: #b37aff;"></i> for retention · Flask & Bootstrap</small></p>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
