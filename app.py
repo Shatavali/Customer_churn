@@ -402,7 +402,7 @@ def _generate_recommendations(p):
 
 @app.errorhandler(404)
 def not_found_error(e):
-    return render_template('404.html'), 404
+    return "Page Not Found", 404
 
 @app.errorhandler(500)
 def internal_error(e):
